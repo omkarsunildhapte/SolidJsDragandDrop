@@ -1,23 +1,21 @@
+
 export function getData() {
     return [
         {
-            header: 'Parent 1',
+            header: 'Door 1',
             items: [
-                { header: 'Child 1.1' },
-                { header: 'Child 1.2' },
-                { header: 'Child 1.3' },
+                { header: 'Door 1.1' },
+                { header: 'Door 1.2' },
+                { header: 'Door 1.3' },
             ],
         },
         {
-            header: 'Parent 2',
+            header: 'Button 1',
             items: [
-                { header: 'Child 2.1' },
-                { header: 'Child 2.2' },
+                { header: 'Button 1.1' },
+                { header: 'Button 1.2' },
+                { header: 'Button 1.3' },
             ],
-        },
-        {
-            header: 'Parent 3',
-            items: [{ header: 'Child 3.1' }],
         },
     ];
 }
@@ -25,23 +23,20 @@ export function getData() {
 export function getEmptyData() {
     return [
         {
-            header: 'Parent 1',
+            header: 'Door 1',
             items: [
-                { header: 'Child 1.1' },
-                { header: 'Child 1.2' },
-                { header: 'Child 1.3' },
+                { header: 'Door 1.1' },
+                { header: 'Door 1.2' },
+                { header: 'Door 1.3' },
             ],
         },
         {
-            header: 'Parent 2',
+            header: 'Button 1',
             items: [
-                { header: 'Child 2.1' },
-                { header: 'Child 2.2' },
+                { header: 'Button 1.1' },
+                { header: 'Button 1.2' },
+                { header: 'Button 1.3' },
             ],
-        },
-        {
-            header: 'Parent 3',
-            items: [{ header: 'Child 3.1' }],
         },
     ];
 }

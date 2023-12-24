@@ -12,6 +12,9 @@ const TreeComponent = () => {
     const [firstTreeData, setFirstTreeData] = createSignal(getData());
     const [secondTreeData, setSecondTreeData] = createSignal(getEmptyData());
 
+    let firstTree: wjNav.TreeView;
+    let secondTree: wjNav.TreeView;
+
     const handleDragOver = (s: any, e: any) => {
         const t1 = e.dragSource.treeView;
         const t2 = e.dropTarget.treeView;
@@ -19,8 +22,38 @@ const TreeComponent = () => {
         if (t1 == t2) {
             e.cancel = true;
         }
-        if (t1 != t2) {
+        if (t1 !== t2) {
             e.cancel = false;
+        }
+    };
+
+    const handleDrop = (s: any, e: any) => {
+        const t1 = e.dragSource.treeView;
+        const t2 = e.dropTarget.treeView;
+
+        if (t1 !== t2) {
+            debugger
+            if (t1.itemsSource[0].header === t2.itemsSource[0].header) {
+                if (e.data && e.data.data) {
+                    const draggedItem = e.data.data;
+                    const newFirstTreeData = [...firstTreeData()];
+                    const newSecondTreeData = [...secondTreeData()];
+
+                    const targetItem = e.dropTarget.dataItem;
+                    const targetItems = targetItem.items || [];
+
+                    const sourceItems = t1 === firstTree ? newFirstTreeData : newSecondTreeData;
+                    const sourceIndex = sourceItems.findIndex((item) => item.header === draggedItem.header);
+                    if (sourceIndex !== -1) {
+                        sourceItems.splice(sourceIndex, 1);
+                    }
+
+                    targetItems.push({ header: draggedItem.header });
+
+                    setFirstTreeData(newFirstTreeData);
+                    setSecondTreeData(newSecondTreeData);
+                }
+            }
         }
     };
 
@@ -29,19 +62,34 @@ const TreeComponent = () => {
         const secondTreeHost = document.getElementById('secondTree');
 
         if (firstTreeHost && secondTreeHost) {
-            const firstTree = new wjNav.TreeView(firstTreeHost, {
+            firstTree = new wjNav.TreeView(firstTreeHost, {
                 itemsSource: firstTreeData(),
                 displayMemberPath: 'header',
                 childItemsPath: 'items',
                 allowDragging: true,
+                dragOver: handleDragOver,
+                drop: handleDrop,
+                dragStart: (s: any, e: any) => {
+                    if (e.data && e.data.data) {
+                        const draggedItem = e.data.data;
+                        e.dragImage = createDragImage(draggedItem.header);
+                    }
+                },
             });
 
-            const secondTree = new wjNav.TreeView(secondTreeHost, {
+            secondTree = new wjNav.TreeView(secondTreeHost, {
                 itemsSource: secondTreeData(),
                 displayMemberPath: 'header',
                 childItemsPath: 'items',
                 allowDragging: true,
                 dragOver: handleDragOver,
+                drop: handleDrop,
+                dragStart: (s: any, e: any) => {
+                    if (e.data && e.data.data) {
+                        const draggedItem = e.data.data;
+                        e.dragImage = createDragImage(draggedItem.header);
+                    }
+                },
             });
 
             window.toggleExpandCollapse = (header: string, tree: wjNav.TreeView) => {
@@ -62,20 +110,17 @@ const TreeComponent = () => {
                 const item = findItem(tree.itemsSource, header);
 
                 if (item) {
-                    // Toggle the expanded/collapsed state only if the item is not a leaf node
                     if (item.items) {
                         item.isCollapsed = !item.isCollapsed;
                     }
                 }
             };
 
-
             onCleanup(() => {
                 firstTree.dispose();
                 secondTree.dispose();
             });
 
-            // Add event listeners to the root elements of the trees for expand/collapse
             firstTree.hostElement.addEventListener('click', (e: MouseEvent) => {
                 const target = e.target as HTMLElement;
                 if (target.tagName === 'SPAN') {
@@ -93,6 +138,18 @@ const TreeComponent = () => {
             });
         }
     });
+
+    function createDragImage(text: string) {
+        const dragImage = document.createElement('div');
+        dragImage.textContent = text;
+        dragImage.style.backgroundColor = 'lightblue';
+        dragImage.style.padding = '5px';
+        dragImage.style.border = '1px solid #000';
+        dragImage.style.position = 'absolute';
+        dragImage.style.zIndex = '1000';
+        document.body.appendChild(dragImage);
+        return dragImage;
+    }
 
     return (
         <div>
