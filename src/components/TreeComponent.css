@@ -1,0 +1,23 @@
+.tree-node {
+    cursor: pointer;
+    padding: 3px;
+    border-radius: 3px;
+    user-select: none;
+    display: inline-block;
+}
+
+.tree-node:hover {
+    background-color: #e0e0e0;
+}
+
+li {
+    margin-left: 15px;
+}
+
+[draggable="true"]:hover {
+    background-color: #c0c0c0;
+}
+
+li.collapsed>ul {
+    display: none;
+}

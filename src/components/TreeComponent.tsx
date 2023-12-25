@@ -1,154 +1,123 @@
-import * as wjNav from '@grapecity/wijmo.nav';
 import { createEffect, createSignal, onCleanup } from 'solid-js';
+import './TreeComponent.css';
 import { getData, getEmptyData } from './data';
 
-declare global {
-    interface Window {
-        toggleExpandCollapse: (header: string, tree: wjNav.TreeView) => void;
-    }
+interface TreeNode {
+    header: string;
+    items?: TreeNode[];
+    isCollapsed?: boolean;
 }
+
+type FoundItemResult = { found: TreeNode; parent: TreeNode[] } | null;
 
 const TreeComponent = () => {
     const [firstTreeData, setFirstTreeData] = createSignal(getData());
     const [secondTreeData, setSecondTreeData] = createSignal(getEmptyData());
-
-    let firstTree: wjNav.TreeView;
-    let secondTree: wjNav.TreeView;
-
-    const handleDragOver = (s: any, e: any) => {
-        const t1 = e.dragSource.treeView;
-        const t2 = e.dropTarget.treeView;
-
-        if (t1 == t2) {
-            e.cancel = true;
-        }
-        if (t1 !== t2) {
-            e.cancel = false;
-        }
-    };
-
-    const handleDrop = (s: any, e: any) => {
-        const t1 = e.dragSource.treeView;
-        const t2 = e.dropTarget.treeView;
-
-        if (t1 !== t2) {
-            debugger
-            if (t1.itemsSource[0].header === t2.itemsSource[0].header) {
-                if (e.data && e.data.data) {
-                    const draggedItem = e.data.data;
-                    const newFirstTreeData = [...firstTreeData()];
-                    const newSecondTreeData = [...secondTreeData()];
-
-                    const targetItem = e.dropTarget.dataItem;
-                    const targetItems = targetItem.items || [];
-
-                    const sourceItems = t1 === firstTree ? newFirstTreeData : newSecondTreeData;
-                    const sourceIndex = sourceItems.findIndex((item) => item.header === draggedItem.header);
-                    if (sourceIndex !== -1) {
-                        sourceItems.splice(sourceIndex, 1);
-                    }
-
-                    targetItems.push({ header: draggedItem.header });
-
-                    setFirstTreeData(newFirstTreeData);
-                    setSecondTreeData(newSecondTreeData);
-                }
-            }
-        }
-    };
+    const [dragAndDropInitialized, setDragAndDropInitialized] = createSignal(false);
 
     createEffect(() => {
         const firstTreeHost = document.getElementById('firstTree');
         const secondTreeHost = document.getElementById('secondTree');
+        if (firstTreeHost && secondTreeHost && !dragAndDropInitialized()) {
+            renderTree(firstTreeHost, firstTreeData, 'firstTree');
+            renderTree(secondTreeHost, secondTreeData, 'secondTree');
 
-        if (firstTreeHost && secondTreeHost) {
-            firstTree = new wjNav.TreeView(firstTreeHost, {
-                itemsSource: firstTreeData(),
-                displayMemberPath: 'header',
-                childItemsPath: 'items',
-                allowDragging: true,
-                dragOver: handleDragOver,
-                drop: handleDrop,
-                dragStart: (s: any, e: any) => {
-                    if (e.data && e.data.data) {
-                        const draggedItem = e.data.data;
-                        e.dragImage = createDragImage(draggedItem.header);
-                    }
-                },
-            });
+            attachDragAndDrop(firstTreeHost, 'firstTree');
+            attachDragAndDrop(secondTreeHost, 'secondTree');
 
-            secondTree = new wjNav.TreeView(secondTreeHost, {
-                itemsSource: secondTreeData(),
-                displayMemberPath: 'header',
-                childItemsPath: 'items',
-                allowDragging: true,
-                dragOver: handleDragOver,
-                drop: handleDrop,
-                dragStart: (s: any, e: any) => {
-                    if (e.data && e.data.data) {
-                        const draggedItem = e.data.data;
-                        e.dragImage = createDragImage(draggedItem.header);
-                    }
-                },
-            });
-
-            window.toggleExpandCollapse = (header: string, tree: wjNav.TreeView) => {
-                const findItem = (items: any[], header: string): any => {
-                    for (const item of items) {
-                        if (item.header === header) {
-                            return item;
-                        } else if (item.items) {
-                            const found = findItem(item.items, header);
-                            if (found) {
-                                return found;
-                            }
-                        }
-                    }
-                    return null;
-                };
-
-                const item = findItem(tree.itemsSource, header);
-
-                if (item) {
-                    if (item.items) {
-                        item.isCollapsed = !item.isCollapsed;
-                    }
-                }
-            };
-
-            onCleanup(() => {
-                firstTree.dispose();
-                secondTree.dispose();
-            });
-
-            firstTree.hostElement.addEventListener('click', (e: MouseEvent) => {
-                const target = e.target as HTMLElement;
-                if (target.tagName === 'SPAN') {
-                    const header = target.textContent || '';
-                    window.toggleExpandCollapse(header, firstTree);
-                }
-            });
-
-            secondTree.hostElement.addEventListener('click', (e: MouseEvent) => {
-                const target = e.target as HTMLElement;
-                if (target.tagName === 'SPAN') {
-                    const header = target.textContent || '';
-                    window.toggleExpandCollapse(header, secondTree);
-                }
-            });
+            setDragAndDropInitialized(true);
         }
+        onCleanup(() => { });
     });
 
-    function createDragImage(text: string) {
-        const dragImage = document.createElement('div');
-        dragImage.textContent = text;
-        dragImage.style.backgroundColor = 'lightblue';
-        dragImage.style.padding = '5px';
-        dragImage.style.border = '1px solid #000';
-        dragImage.style.position = 'absolute';
-        dragImage.style.zIndex = '1000';
-        document.body.appendChild(dragImage);
-        return dragImage;
+    function renderTree(treeHost: HTMLElement, treeDataSignal: any, treeId: string) {
+        const treeData = treeDataSignal();
+        treeHost.innerHTML = createTreeHTML(treeData, treeId);
+    }
+
+    function createTreeHTML(data: TreeNode[], treeId: string): string {
+        return `<ul>${data.map((item) => createTreeNodeHTML(item, treeId)).join('')}</ul>`;
+    }
+
+    function createTreeNodeHTML(item: TreeNode, treeId: string): string {
+        return `
+      <li draggable="true">
+        <span class="tree-node" onclick="window.toggleExpandCollapse('${item.header}', '${treeId}')">
+          ${item.header}
+        </span>
+        ${item.items && !item.isCollapsed ? createTreeHTML(item.items, treeId) : ''}
+      </li>
+    `;
+    }
+
+    function attachDragAndDrop(treeHost: HTMLElement, treeId: string) {
+        treeHost.addEventListener('dragstart', (e) => {
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'LI' && e.dataTransfer) {
+                e.dataTransfer.setData('text/plain', target.innerHTML);
+                e.dataTransfer.effectAllowed = 'move';
+            }
+        });
+
+        treeHost.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = 'move';
+            }
+        });
+
+        treeHost.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const target = e.target as HTMLElement;
+            const draggedHTML = e.dataTransfer?.getData('text/plain');
+            if (!draggedHTML) {
+                return;
+            }
+            const draggedItem = parseHTML(draggedHTML);
+            const cleanedHeader = draggedItem.header.trim();
+            const sourceTreeData = treeId === 'firstTree' ? firstTreeData : secondTreeData;
+            const newTreeData = [...sourceTreeData()];
+            const result = findItem(newTreeData, target.textContent?.trim() || '');
+
+            debugger
+            if (result && result.parent !== undefined) {
+                if (result.found.header.includes(cleanedHeader.replace(/\s\d+(\.\d+)?$/, '').trim())) {
+                    result.parent.push({ header: cleanedHeader });
+                    debugger
+                    const updatedSourceTreeData = sourceTreeData().map(e => ({ header: e.header, items: e.items.filter(m => m.header !== cleanedHeader) }));
+                    if (treeId === 'firstTree') {
+                        setSecondTreeData(updatedSourceTreeData);
+                    } else {
+                        setFirstTreeData(updatedSourceTreeData);
+                    }
+                } else {
+                    alert('can not make drop here')
+                }
+            } else { }
+            renderTree(document.getElementById(treeId)!, treeId === 'firstTree' ? firstTreeData : secondTreeData, treeId);
+        });
+    }
+
+    function findItem(items: TreeNode[], header: string, parent: TreeNode[] = []): FoundItemResult {
+        for (const item of items) {
+            if (item.header.trim() === header.trim()) {
+                return { found: item, parent };
+            } else if (item.items) {
+                const foundInChild = findItem(item.items, header, item.items);
+                if (foundInChild) {
+                    return foundInChild;
+                }
+            }
+        }
+        return null;
+    }
+
+    function parseHTML(html: string): TreeNode {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        return {
+            header: tempDiv.textContent || '',
+        };
     }
 
     return (
