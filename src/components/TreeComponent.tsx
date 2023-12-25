@@ -79,21 +79,22 @@ const TreeComponent = () => {
             const newTreeData = [...sourceTreeData()];
             const result = findItem(newTreeData, target.textContent?.trim() || '');
 
-            debugger
             if (result && result.parent !== undefined) {
                 if (result.found.header.includes(cleanedHeader.replace(/\s\d+(\.\d+)?$/, '').trim())) {
                     result.parent.push({ header: cleanedHeader });
-                    debugger
-                    const updatedSourceTreeData = sourceTreeData().map(e => ({ header: e.header, items: e.items.filter(m => m.header !== cleanedHeader) }));
+                    const updatedSourceTreeData = sourceTreeData().map(e => ({ header: e.header, items: e.items ? e.items.filter(m => m.header !== cleanedHeader) : [] }));
                     if (treeId === 'firstTree') {
-                        setSecondTreeData(updatedSourceTreeData);
-                    } else {
                         setFirstTreeData(updatedSourceTreeData);
+                        renderTree(document.getElementById('firstTree')!, firstTreeData, 'firstTree');
+                    } else {
+                        setSecondTreeData(updatedSourceTreeData);
+                        renderTree(document.getElementById('secondTree')!, secondTreeData, 'secondTree');
                     }
                 } else {
-                    alert('can not make drop here')
+                    alert('Cannot drop here');
                 }
-            } else { }
+            }
+
             renderTree(document.getElementById(treeId)!, treeId === 'firstTree' ? firstTreeData : secondTreeData, treeId);
         });
     }
